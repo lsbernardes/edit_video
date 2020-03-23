@@ -1,4 +1,7 @@
 #!/bin/bash
+# It is required to have "zenity" package installed to use this script
+# In debian based distros you can install it using this command:
+# apt install zenity
 
 cortar() {
     file="$(zenity --file-selection 2> /dev/null)"
@@ -13,14 +16,14 @@ cortar() {
     then  
         if [[ $(echo -n $inicio | wc -c) -eq  6 ]]
         then
-             ffmpeg -i "$file" -ss "${inicio:0:2}":"${inicio:2:2}":"${inicio:4:2}" -to "${fim:0:2}":"${fim:2:2}":"${fim:4:2}" -codec copy "$dirname"/"${output// /_}".mp4
-            echo -e "\nffmpeg -i \""$file"\" -ss "${inicio:0:2}":"${inicio:2:2}":"${inicio:4:2}" -to "${fim:0:2}":"${fim:2:2}":"${fim:4:2}" -codec copy \"$dirname/"${output// /_}".mp4\""
-            echo -e "\nffmpeg -i \""$file"\" -ss "${inicio:0:2}":"${inicio:2:2}":"${inicio:4:2}" -to "${fim:0:2}":"${fim:2:2}":"${fim:4:2}" -codec copy \"$dirname/"${output// /_}".mp4\"" | xclip -i -selection clipboard
+             ffmpeg -i "$file" -ss "${inicio:0:2}":"${inicio:2:2}":"${inicio:4:2}" -to "${fim:0:2}":"${fim:2:2}":"${fim:4:2}" "$dirname"/"${output// /_}".mp4
+            echo -e "\nffmpeg -i \""$file"\" -ss "${inicio:0:2}":"${inicio:2:2}":"${inicio:4:2}" -to "${fim:0:2}":"${fim:2:2}":"${fim:4:2}" \"$dirname/"${output// /_}".mp4\""
+            echo -e "\nffmpeg -i \""$file"\" -ss "${inicio:0:2}":"${inicio:2:2}":"${inicio:4:2}" -to "${fim:0:2}":"${fim:2:2}":"${fim:4:2}" \"$dirname/"${output// /_}".mp4\"" | xclip -i -selection clipboard
         elif [[ $(echo -n $inicio | wc -c) -eq  4 ]]
         then
-            ffmpeg -i "$file" -ss "${inicio:0:2}":"${inicio:2:2}" -to "${fim:0:2}":"${fim:2:2}" -codec copy "$dirname"/"${output// /_}".mp4
-            echo -e "\nffmpeg -i \""$file"\" -ss "${inicio:0:2}":"${inicio:2:2}" -to "${fim:0:2}":"${fim:2:2}" -codec copy \"$dirname/"${output// /_}".mp4\""
-            echo -e "\nffmpeg -i \""$file"\" -ss "${inicio:0:2}":"${inicio:2:2}" -to "${fim:0:2}":"${fim:2:2}" -codec copy \"$dirname/"${output// /_}".mp4\"" | xclip -i -selection clipboard
+            ffmpeg -i "$file" -ss "${inicio:0:2}":"${inicio:2:2}" -to "${fim:0:2}":"${fim:2:2}" "$dirname"/"${output// /_}".mp4
+            echo -e "\nffmpeg -i \""$file"\" -ss "${inicio:0:2}":"${inicio:2:2}" -to "${fim:0:2}":"${fim:2:2}" \"$dirname/"${output// /_}".mp4\""
+            echo -e "\nffmpeg -i \""$file"\" -ss "${inicio:0:2}":"${inicio:2:2}" -to "${fim:0:2}":"${fim:2:2}" \"$dirname/"${output// /_}".mp4\"" | xclip -i -selection clipboard
         fi
     else
         echo "Alguma das variáveis é nula"
