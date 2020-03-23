@@ -1,0 +1,62 @@
+#!/bin/bash
+
+cortar() {
+    file="$(zenity --file-selection 2> /dev/null)"
+    dirname="$(dirname "$file")"
+    output="$(zenity --title="Output file" --text "Name?" --entry 2> /dev/null)"
+    echo -n "Inicio? 0123 " ; read inicio
+    echo -n "Fim?  0259 " ; read fim
+
+    # [[ $(echo -n $inicio |wc -c) -le 4 ]] && inicio=00$inicio
+
+    if [[ -n $file  && -n $output  && -n $inicio && -n $fim ]]
+    then  
+        if [[ $(echo -n $inicio | wc -c) -eq  6 ]]
+        then
+             ffmpeg -i "$file" -ss "${inicio:0:2}":"${inicio:2:2}":"${inicio:4:2}" -to "${fim:0:2}":"${fim:2:2}":"${fim:4:2}" -codec copy "$dirname"/"${output// /_}".mp4
+            echo -e "\nffmpeg -i \""$file"\" -ss "${inicio:0:2}":"${inicio:2:2}":"${inicio:4:2}" -to "${fim:0:2}":"${fim:2:2}":"${fim:4:2}" -codec copy \"$dirname/"${output// /_}".mp4\""
+            echo -e "\nffmpeg -i \""$file"\" -ss "${inicio:0:2}":"${inicio:2:2}":"${inicio:4:2}" -to "${fim:0:2}":"${fim:2:2}":"${fim:4:2}" -codec copy \"$dirname/"${output// /_}".mp4\"" | xclip -i -selection clipboard
+        elif [[ $(echo -n $inicio | wc -c) -eq  4 ]]
+        then
+            ffmpeg -i "$file" -ss "${inicio:0:2}":"${inicio:2:2}" -to "${fim:0:2}":"${fim:2:2}" -codec copy "$dirname"/"${output// /_}".mp4
+            echo -e "\nffmpeg -i \""$file"\" -ss "${inicio:0:2}":"${inicio:2:2}" -to "${fim:0:2}":"${fim:2:2}" -codec copy \"$dirname/"${output// /_}".mp4\""
+            echo -e "\nffmpeg -i \""$file"\" -ss "${inicio:0:2}":"${inicio:2:2}" -to "${fim:0:2}":"${fim:2:2}" -codec copy \"$dirname/"${output// /_}".mp4\"" | xclip -i -selection clipboard
+        fi
+    else
+        echo "Alguma das variáveis é nula"
+    fi
+}
+
+legenda() {
+    input="$(zenity --title="Input file" --file-selection 2> /dev/null)"
+    dirname="$(dirname "$input")"
+    sub="$(zenity --title="Subtitle" --file-selection 2> /dev/null)"
+    output="$(zenity --title="Output file" --text "Name?" --entry 2> /dev/null)"
+    
+    ffmpeg -i "$input" -vf "subtitles='$sub':force_style='FontName=Segoe UI Bold,Fontsize=24,PrimaryColour=&H00FFFF&'" -acodec copy -max_muxing_queue_size 1024 "$dirname"/"${output}".mp4
+    echo -e "\nffmpeg -i ${input} -vf \"subtitles=${sub}:force_style='FontName=Segoe UI Bold,Fontsize=24,PrimaryColour=&H00FFFF&'\" -acodec copy -max_muxing_queue_size 1024 $dirname/${output}.mp4"
+    echo -e "ffmpeg -i ${input} -vf \"subtitles=${sub}:force_style='FontName=Segoe UI Bold,Fontsize=24,PrimaryColour=&H00FFFF&'\" -acodec copy -max_muxing_queue_size 1024 $dirname/${output}.mp4" | xclip -i -selection clipboard
+}
+
+echo -e "\
+        1_CORTAR\n\
+        2_CORTAR COM LEGENDAS\n\
+        3_LEGENDAS\n"
+
+while [[ ($resp != 1) && ($resp != 2) && ($resp != 3) ]]
+do
+    read -p "# " resp
+    case $resp in
+        1) echo "Cortar vídeo..."
+        cortar
+        ;; 
+        2) echo "Cortar vídeo com legenda..."
+
+        ;;
+        3) echo "Gravar legenda..."
+        legenda
+        ;;
+        *) echo "Opção inválida"
+    esac
+done
+
