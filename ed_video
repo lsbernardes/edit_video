@@ -3,12 +3,12 @@
 # In debian based distros you can install it using this command:
 # apt install zenity
 
-FONT_CONFIG='FontName=Segoe UI Bold,Fontsize=24,PrimaryColour=&H00FFFF&'
+FONT_CONFIG='FontName=Segoe UI Bold,Fontsize=25,PrimaryColour=&H00FFFF&'
 
 cut_vid() {
     file="$(zenity --file-selection 2> /dev/null)"
     dirname="$(dirname "$file")"
-    [ -n $1 ] && sub="$(zenity --title="Subtitle" --file-selection 2> /dev/null)"
+    [[ -n $1 ]] && sub="$(zenity --title="Subtitle" --file-selection 2> /dev/null)"
     output="$(zenity --title="Output file" --text "Name?" --entry 2> /dev/null)"
 
     echo -n "Inicio? 0123 " ; read inicio
@@ -18,7 +18,7 @@ cut_vid() {
     then  
         if [[ $(echo -n $inicio | wc -c) -eq  6 ]]
         then
-            if [ -n $1 ]
+            if [[ -n $1 ]]
             then
                 ffmpeg -i "$file" -ss "${inicio:0:2}":"${inicio:2:2}":"${inicio:4:2}" -to "${fim:0:2}":"${fim:2:2}":"${fim:4:2}" -vf "subtitles='$sub':force_style='$FONT_CONFIG" "$dirname"/"${output// /_}".mp4
                 echo -e "\nffmpeg -i \""$file"\" -ss "${inicio:0:2}":"${inicio:2:2}":"${inicio:4:2}" -to "${fim:0:2}":"${fim:2:2}":"${fim:4:2}" -vf \"subtitles='$sub':force_style='$FONT_CONFIG\" \"$dirname/"${output// /_}".mp4\"" | tee | xclip -i -selection clipboard
@@ -29,7 +29,7 @@ cut_vid() {
 
         elif [[ $(echo -n $inicio | wc -c) -eq  4 ]]
         then
-            if [ -n $1 ]
+            if [[ -n $1 ]]
             then
                 ffmpeg -i "$file" -ss "${inicio:0:2}":"${inicio:2:2}" -to "${fim:0:2}":"${fim:2:2}" -vf "subtitles='$sub':force_style='$FONT_CONFIG" "$dirname"/"${output// /_}".mp4
                 echo -e "\nffmpeg -i \""$file"\" -ss "${inicio:0:2}":"${inicio:2:2}" -to "${fim:0:2}":"${fim:2:2}" -vf \"subtitles='$sub':force_style='$FONT_CONFIG\" \"$dirname/"${output// /_}".mp4\"" | tee | xclip -i -selection clipboard
@@ -51,14 +51,13 @@ subtitle() {
     sub="$(zenity --title="Subtitle" --file-selection 2> /dev/null)"
     output="$(zenity --title="Output file" --text "Name?" --entry 2> /dev/null)"
     
-    ffmpeg -i "$input" -vf "subtitles='$sub':force_style='$FONT_CONFIG" -acodec copy -max_muxing_queue_size 1024 "$dirname"/"${output}".mp4
-    echo -e "ffmpeg -i ${input} -vf \"subtitles=${sub}:force_style='$FONT_CONFIG'\" -acodec copy -max_muxing_queue_size 1024 $dirname/${output}.mp4" | tee | xclip -i -selection clipboard
+    ffmpeg -i "$input" -vf "subtitles='$sub':force_style='$FONT_CONFIG" -vcodec copy -acodec copy -max_muxing_queue_size 1024 "$dirname"/"${output}".mp4
+    echo -e "ffmpeg -i ${input} -vf \"subtitles=${sub}:force_style='$FONT_CONFIG'\" -vcodec copy -acodec copy -max_muxing_queue_size 1024 $dirname/${output}.mp4" | tee | xclip -i -selection clipboard
 }
 
-echo -e "\
-        1_CORTAR\n\
-        2_CORTAR COM LEGENDAS\n\
-        3_LEGENDAS\n :"
+echo -e "1_CORTAR\n\
+2_CORTAR COM LEGENDAS\n\
+3_LEGENDAS\n"
 
 while [[ ($resp != 1) && ($resp != 2) && ($resp != 3) ]]
 do
