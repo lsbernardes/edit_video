@@ -1,18 +1,56 @@
 #!/bin/bash
-# It is required to have "zenity" package installed to use this script
+# ed_video by Leonardo Bernardes
+# The script required the "zenity" package installed to be used
 # In debian based distros you can install it using this command:
 # apt install zenity
 
 FONT_CONFIG='FontName=Segoe UI Bold,Fontsize=25,PrimaryColour=&H00FFFF&'
+[[ $LANGUAGE == "pt_BR" ]] && { 
+    LAST="1) CORTAR\n2) CORTAR_COM_LEGENDAS\n3) LEGENDAS"
+    INICIO="Início"
+    FIM="Fim"
+    LEGENDA="Legenda convertida pro código de caratéres UTF-8"
+    UM="O registro do tempo precisa ter 4 ou 6 digitos, obrigatoriamente! 1:03 precisa ser 0103"
+    DOIS="Alguma das variáveis é nula"
+    TRES="Cortar vídeo..."
+    QUATRO="Cortar vídeo com legenda..."
+    CINCO="Gravar legenda..."
+    SEIS="Opção inválida"
+}
+
+[[ $LANGUAGE == "en_US" ]] || [[ -z $LANGUAGE ]] || [[ $LANGUAGE != "pt_BR" ]] && {
+    LAST="1) TO_CUT\n2) TO_CUT_WITH_SUBTITLES\n3) TO_HARDCODE_SUBTITLES"
+    INICIO="Beginning"
+    FIM="End"
+    LEGENDA="Subtitle converted to UTF-8 charset"
+    UM="Time register must necessarily have 4 or 6 digits! 1:03 must be 0103"
+    DOIS="Some variable is null"
+    TRES="To cut video..."
+    QUATRO="To cut with subtitles..."
+    CINCO="To hardcode subtitles..."
+    SEIS="Invalid option"
+}
 
 cut_vid() {
     file="$(zenity --file-selection 2> /dev/null)"
     dirname="$(dirname "$file")"
-    [[ -n $1 ]] && sub="$(zenity --title="Subtitle" --file-selection 2> /dev/null)"
+    [[ -n $1 ]] && {
+        sub="$(zenity --title="Subtitle" --file-selection --filename="$dirname" 2> /dev/null)"
+        # check if subtitle file is coded in utf-8 charset. Otherwise we will get an error while encoding the video
+        charset="$(file -i "$sub" |tr ' ' '\n' |grep -i charset |cut -d= -f2)"
+        if [  "$charset" != "utf-8" ]
+        then
+            new_name=$(mktemp -u legenda_XXXXXX)
+            iconv -f "$charset" -t utf-8 "$sub" -o $new_name
+            sub="$new_name"
+            echo "$LEGENDA"
+        fi
+    }
     output="$(zenity --title="Output file" --text "Name?" --entry 2> /dev/null)"
 
-    echo -n "Inicio? 0123 " ; read inicio
-    echo -n "Fim?  0259 " ; read fim
+    echo -n "$INICIO? 0123 " ; read inicio
+    echo -n "$FIM?  0259 " ; read fim
+    echo "$inicio\n$fim\n$output" >> $dirname/INFO
 
     if [[ -n $file  && -n $output  && -n $inicio && -n $fim ]]
     then  
@@ -20,48 +58,46 @@ cut_vid() {
         then
             if [[ -n $1 ]]
             then
-                ffmpeg -i "$file" -ss "${inicio:0:2}":"${inicio:2:2}":"${inicio:4:2}" -to "${fim:0:2}":"${fim:2:2}":"${fim:4:2}" -vf "subtitles='$sub':force_style='$FONT_CONFIG" "$dirname"/"${output// /_}".mp4
-                echo -e "\nffmpeg -i \""$file"\" -ss "${inicio:0:2}":"${inicio:2:2}":"${inicio:4:2}" -to "${fim:0:2}":"${fim:2:2}":"${fim:4:2}" -vf \"subtitles='$sub':force_style='$FONT_CONFIG\" \"$dirname/"${output// /_}".mp4\"" | tee | xclip -i -selection clipboard
+                ffmpeg -i "$file" -ss "${inicio:0:2}":"${inicio:2:2}":"${inicio:4:2}" -to "${fim:0:2}":"${fim:2:2}":"${fim:4:2}" -vf "subtitles='$sub':force_style='$FONT_CONFIG'" -crf 18 "$dirname"/"${output// /_}".mp4
+                echo -e "\nffmpeg -i \""$file"\" -ss "${inicio:0:2}":"${inicio:2:2}":"${inicio:4:2}" -to "${fim:0:2}":"${fim:2:2}":"${fim:4:2}" -vf \"subtitles='$sub':force_style='$FONT_CONFIG'\" -crf 18 \"$dirname/"${output// /_}".mp4\"" | tee | xclip -i -selection clipboard
             else
-                ffmpeg -i "$file" -ss "${inicio:0:2}":"${inicio:2:2}":"${inicio:4:2}" -to "${fim:0:2}":"${fim:2:2}":"${fim:4:2}" "$dirname"/"${output// /_}".mp4
-                echo -e "\nffmpeg -i \""$file"\" -ss "${inicio:0:2}":"${inicio:2:2}":"${inicio:4:2}" -to "${fim:0:2}":"${fim:2:2}":"${fim:4:2}" \"$dirname/"${output// /_}".mp4\"" | tee | xclip -i -selection clipboard
+                ffmpeg -i "$file" -ss "${inicio:0:2}":"${inicio:2:2}":"${inicio:4:2}" -to "${fim:0:2}":"${fim:2:2}":"${fim:4:2}" -crf 18 -codec copy "$dirname"/"${output// /_}".mp4
+                echo -e "\nffmpeg -i \""$file"\" -ss "${inicio:0:2}":"${inicio:2:2}":"${inicio:4:2}" -to "${fim:0:2}":"${fim:2:2}":"${fim:4:2}" -crf 18 -codec copy \"$dirname/"${output// /_}".mp4\"" | tee | xclip -i -selection clipboard
             fi
 
         elif [[ $(echo -n $inicio | wc -c) -eq  4 ]]
         then
             if [[ -n $1 ]]
             then
-                ffmpeg -i "$file" -ss "${inicio:0:2}":"${inicio:2:2}" -to "${fim:0:2}":"${fim:2:2}" -vf "subtitles='$sub':force_style='$FONT_CONFIG" "$dirname"/"${output// /_}".mp4
-                echo -e "\nffmpeg -i \""$file"\" -ss "${inicio:0:2}":"${inicio:2:2}" -to "${fim:0:2}":"${fim:2:2}" -vf \"subtitles='$sub':force_style='$FONT_CONFIG\" \"$dirname/"${output// /_}".mp4\"" | tee | xclip -i -selection clipboard
+                ffmpeg -i "$file" -ss "${inicio:0:2}":"${inicio:2:2}" -to "${fim:0:2}":"${fim:2:2}" -vf "subtitles='$sub':force_style='$FONT_CONFIG" -crf 18 "$dirname"/"${output// /_}".mp4
+                echo -e "\nffmpeg -i \""$file"\" -ss "${inicio:0:2}":"${inicio:2:2}" -to "${fim:0:2}":"${fim:2:2}" -vf \"subtitles='$sub':force_style='$FONT_CONFIG\" -crf 18 \"$dirname/"${output// /_}".mp4\"" | tee | xclip -i -selection clipboard
             else    
-                ffmpeg -i "$file" -ss "${inicio:0:2}":"${inicio:2:2}" -to "${fim:0:2}":"${fim:2:2}" "$dirname"/"${output// /_}".mp4
-                echo -e "\nffmpeg -i \""$file"\" -ss "${inicio:0:2}":"${inicio:2:2}" -to "${fim:0:2}":"${fim:2:2}" \"$dirname/\"${output// /_}\".mp4\"" | tee | xclip -i -selection clipboard
+                ffmpeg -i "$file" -ss "${inicio:0:2}":"${inicio:2:2}" -to "${fim:0:2}":"${fim:2:2}" -crf 18 -codec copy "$dirname"/"${output// /_}".mp4
+                echo -e "\nffmpeg -i \""$file"\" -ss "${inicio:0:2}":"${inicio:2:2}" -to "${fim:0:2}":"${fim:2:2}" -crf 18 -codec copy \"$dirname/\"${output// /_}\".mp4\"" | tee | xclip -i -selection clipboard
             fi
         else
-            echo "O registro do tempo precisa ter 4 ou 6 digitos, obrigatoriamente! 1:03 precisa ser 0103"
+            echo "$UM"
         fi
     else
-        echo "Alguma das variáveis é nula"
+        echo "$DOIS"
     fi
 }
 
 subtitle() {
     input="$(zenity --title="Input file" --file-selection 2> /dev/null)"
     dirname="$(dirname "$input")"
-    sub="$(zenity --title="Subtitle" --file-selection 2> /dev/null)"
+    sub="$(zenity --title="Subtitle" --file-selection --filename="$dirname" 2> /dev/null)"
     output="$(zenity --title="Output file" --text "Name?" --entry 2> /dev/null)"
     
     ffmpeg -i "$input" -vf "subtitles='$sub':force_style='$FONT_CONFIG" -vcodec copy -acodec copy -max_muxing_queue_size 1024 "$dirname"/"${output}".mp4
     echo -e "ffmpeg -i ${input} -vf \"subtitles=${sub}:force_style='$FONT_CONFIG'\" -vcodec copy -acodec copy -max_muxing_queue_size 1024 $dirname/${output}.mp4" | tee | xclip -i -selection clipboard
 }
 
-echo -e "1_CORTAR\n\
-2_CORTAR COM LEGENDAS\n\
-3_LEGENDAS\n"
+echo -e "$LAST"
 
 while [[ ($resp != 1) && ($resp != 2) && ($resp != 3) ]]
 do
-    read -p "# " resp
+    read -p "#) " resp
     case $resp in
         1) echo "Cortar vídeo..."
         cut_vid
@@ -75,5 +111,3 @@ do
         *) echo "Opção inválida"
     esac
 done
-
-exit 0
