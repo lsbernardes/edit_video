@@ -7,7 +7,7 @@
 FONT_CONFIG='FontName=Segoe UI Bold,Fontsize=25,PrimaryColour=&H00FFFF&'
 
 [[ $LANGUAGE == "pt_BR" ]] && { 
-    LAST="1) CORTAR\n2) CORTAR_COM_LEGENDAS\n3) LEGENDAS\n4) CORTAR LEGENDA"
+    LAST="1) CORTAR\n2) CORTAR_COM_LEGENDAS\n3) LEGENDAS\n4) CORTAR LEGENDA\n5) SAIR"
     INICIO="Início"
     FIM="Fim"
     LEGENDA="Legenda convertida pro código de caratéres UTF-8"
@@ -18,10 +18,12 @@ FONT_CONFIG='FontName=Segoe UI Bold,Fontsize=25,PrimaryColour=&H00FFFF&'
     CINCO="Gravar legenda..."
     SEIS="Opção inválida"
     SETE="Cortar legendas..."
+    TERM="Terminado!"
+    OITO="S"
 }
 
 [[ $LANGUAGE == "en_US" ]] || [[ -z $LANGUAGE ]] || [[ $LANGUAGE != "pt_BR" ]] && {
-    LAST="1) TO CUT\n2) TO CUT WITH SUBTITLES\n3) TO HARDCODE SUBTITLES\n4) TO CUT SUBTITLES"
+    LAST="1) TO CUT\n2) TO CUT WITH SUBTITLES\n3) TO HARDCODE SUBTITLES\n4) TO CUT SUBTITLES\n5) EXIT"
     INICIO="Beginning"
     FIM="End"
     LEGENDA="Subtitle converted to UTF-8 charset"
@@ -32,6 +34,7 @@ FONT_CONFIG='FontName=Segoe UI Bold,Fontsize=25,PrimaryColour=&H00FFFF&'
     CINCO="To hardcode subtitles..."
     SEIS="Invalid option"
     SETE="To cut subtitles..."
+    TERM="Finished!"
 }
 
 cut_vid() {
@@ -52,14 +55,14 @@ cut_vid() {
             sub="$new_name"
             echo "$LEGENDA"
             # to strip any formatting settings
-            [[ -n $(cat $sub |grep -i font ) ]] && sed -i -e 's/<[^>]*>//g' -e 's/^ //' "$sub"
+            [[ -n $(cat "$sub" |grep -i font ) ]] && sed -i -e 's/<[^>]*>//g' -e 's/^ //' "$sub"
         fi
     }
     output="$(zenity --title="Output file" --text "Name?" --entry 2> /dev/null)"
 
     echo -n "$INICIO? 0123 " ; read inicio
     echo -n "$FIM?  0259 " ; read fim
-    echo -e "$inicio\n$fim\n$output\n" >> "$dirname"/INFO
+    echo -e "$inicio $fim\n$output\n" >> "$dirname"/INFO
 
     if [[ -n $file  && -n $output  && -n $inicio && -n $fim ]]
     then  
@@ -67,14 +70,14 @@ cut_vid() {
         then
             if [[ -n $1 ]]
             then
-                cmd="ffmpeg -i \"$file\" -i \"$sub\" -ss "${inicio:0:2}":"${inicio:2:2}":"${inicio:4:2}" -to "${fim:0:2}":"${fim:2:2}":"${fim:4:2}" -scodec $scodec -acodec copy -vcodec copy \"$dirname\"/"${output// /_}"."$extension""
+                cmd="ffmpeg -i \"$file\" -i \"$sub\" -ss "${inicio:0:2}":"${inicio:2:2}":"${inicio:4:2}" -to "${fim:0:2}":"${fim:2:2}":"${fim:4:2}" -scodec $scodec -acodec copy -vcodec h264 -qp 12 \"$dirname\"/"${output// /_}"."$extension""
                 eval $cmd
                 echo $cmd | xclip -i -selection clipboard
                 ffmpeg -i "$sub" -ss "${inicio:0:2}":"${inicio:2:2}":"${inicio:4:2}" -to "${fim:0:2}":"${fim:2:2}":"${fim:4:2}" "$dirname"/"${output// /_}".srt
-                rm "$sub"
+                # rm "$sub"
                 # ffmpeg -i "$dirname"/"${output// /_}"."$extension" -map 0:s:0 "$dirname"/"${output// /_}".srt
             else
-                cmd="ffmpeg -i \"$file\" -ss "${inicio:0:2}":"${inicio:2:2}":"${inicio:4:2}" -to "${fim:0:2}":"${fim:2:2}":"${fim:4:2}" -acodec copy -vcodec copy  \"$dirname\"/"${output// /_}"."$extension""
+                cmd="ffmpeg -i \"$file\" -ss "${inicio:0:2}":"${inicio:2:2}":"${inicio:4:2}" -to "${fim:0:2}":"${fim:2:2}":"${fim:4:2}" -acodec copy -vcodec h264 -qp 12  \"$dirname\"/"${output// /_}"."$extension""
                 eval $cmd
                 echo $cmd | xclip -i -selection clipboard
             fi
@@ -83,14 +86,14 @@ cut_vid() {
         then
             if [[ -n $1 ]]
             then
-                cmd="ffmpeg -i \"$file\" -i \"$sub\" -ss "${inicio:0:2}":"${inicio:2:2}" -to "${fim:0:2}":"${fim:2:2}" -scodec $scodec -acodec copy -vcodec copy \"$dirname\"/"${output// /_}"."$extension""
+                cmd="ffmpeg -i \"$file\" -i \"$sub\" -ss "${inicio:0:2}":"${inicio:2:2}" -to "${fim:0:2}":"${fim:2:2}" -scodec $scodec -acodec copy -vcodec h264 -qp 12 \"$dirname\"/"${output// /_}"."$extension""
                 eval $cmd
                 echo $cmd | xclip -i -selection clipboard
                 ffmpeg -i "$sub" -ss "${inicio:0:2}":"${inicio:2:2}" -to "${fim:0:2}":"${fim:2:2}" "$dirname"/"${output// /_}".srt
-                rm "$sub"
+                # rm "$sub"
                 # ffmpeg -i "$dirname"/"${output// /_}"."$extension" -map 0:s:0 "$dirname"/"${output// /_}".srt
             else    
-                cmd="ffmpeg -i \"$file\" -ss "${inicio:0:2}":"${inicio:2:2}" -to "${fim:0:2}":"${fim:2:2}" -acodec copy -vcodec copy \"$dirname\"/"${output// /_}"."$extension""
+                cmd="ffmpeg -i \"$file\" -ss "${inicio:0:2}":"${inicio:2:2}" -to "${fim:0:2}":"${fim:2:2}" -acodec copy -vcodec h264 -qp 12 \"$dirname\"/"${output// /_}"."$extension""
                 eval $cmd
                 echo $cmd | xclip -i -selection clipboard
             fi
@@ -100,6 +103,8 @@ cut_vid() {
     else
         echo "$DOIS"
     fi
+    notify-send -u critical -t 600 -i task-due "ED_VIDEO" "$TERM"
+
 }
 
 cut_subtitles() {
@@ -114,14 +119,14 @@ cut_subtitles() {
         sub="$new_name"
         echo "$sub"
         echo "$LEGENDA"
-        [[ -n $(cat $sub |grep -i font ) ]] && sed -i -e 's/<[^>]*>//g' -e 's/^ //' "$sub"
+        [[ -n $(cat "$sub" |grep -i font ) ]] && sed -i -e 's/<[^>]*>//g' -e 's/^ //' "$sub"
     fi
 
     echo -n "$INICIO? 0123 " ; read inicio
     echo -n "$FIM?  0259 " ; read fim
-    echo -e "$inicio\n$fim\n$output\n" >> "$dirname"/INFO
+    echo -e "$inicio $fim\n$output\n" >> "$dirname"/INFO
 
-    if [[ -n $file  && -n $output  && -n $inicio && -n $fim ]]
+    if [[ -n $sub  && -n $output  && -n $inicio && -n $fim ]]
     then  
         if [[ $(echo -n $inicio | wc -c) -eq  6 ]]
         then
@@ -140,6 +145,7 @@ cut_subtitles() {
         echo "$DOIS"
     fi
     [[ -e "$new_name" ]] && rm "$new_name"
+    notify-send -u critical -t 600 -i task-due "ED_VIDEO" "$TERM"
 }
 
 subtitle_hardcoded() {
@@ -154,11 +160,12 @@ subtitle_hardcoded() {
     cmd="ffmpeg -i \"$file\" -vf \"subtitles='${sub}':force_style='${FONT_CONFIG}'\" -crf 14 -max_muxing_queue_size 1024 \"$dirname\"/"${output// /_}".mp4"
     eval $cmd
     echo $cmd | xclip -i -selection clipboard
+    notify-send -u critical -t 600 -i task-due "ED_VIDEO" "$TERM"
 }
 
 echo -e "$LAST"
 
-while [[ ($resp != 1) && ($resp != 2) && ($resp != 3) ]]
+while [[ ($resp != 1) && ($resp != 2) && ($resp != 3) && ($resp != 4) && ($resp != 5) ]]
 do
     read -p "#) " resp
     case $resp in
@@ -173,6 +180,9 @@ do
         ;;
         4) echo "$SETE"
         cut_subtitles
+        ;;
+        5) echo "$OITO"
+        exit 0
         ;;
         *) echo "$SEIS"
     esac
