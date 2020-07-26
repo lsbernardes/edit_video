@@ -15,6 +15,7 @@ Usage
 
 It is easy to use **edit_video**, you run the script and it will prompted some options:
 ```
+$ ed_video
 1) TO CUT
 2) TO CUT WITH SUBTITLES
 3) TO HARDCODE SUBTITLES
