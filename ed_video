@@ -5,6 +5,7 @@
 # apt install zenity
 
 FONT_CONFIG='FontName=Segoe UI Bold,Fontsize=25,PrimaryColour=&H00FFFF&'
+ARGS="$@"
 
 [[ $LANGUAGE == "pt_BR" ]] && { 
     LAST="1) CORTAR\n2) CORTAR_COM_LEGENDAS\n3) LEGENDAS\n4) CORTAR LEGENDA\n5) SAIR"
@@ -37,83 +38,68 @@ FONT_CONFIG='FontName=Segoe UI Bold,Fontsize=25,PrimaryColour=&H00FFFF&'
     TERM="Finished!"
 }
 
-cut_vid() {
-    file="$(zenity --title="File" --file-selection 2> /dev/null)"
+_getData() {
+    [[ -e $ARGS ]] && file="$ARGS" || file="$(zenity --title="File" --file-selection 2> /dev/null)"
     filename="$(basename -- "$file")"
-    extension="${filename##*.}"
     dirname="$(dirname "$file")"
-    [[ $extension == "mkv" ]] && scodec="srt" || scodec="mov_text"
-
-    [[ -n $1 ]] && {
-        sub="$(zenity --title="Subtitle" --file-selection --filename="$file" 2> /dev/null)"
-        # check if subtitle file is coded in utf-8 charset. Otherwise we will get an error while encoding the video
-        charset="$(file -i "$sub" |tr ' ' '\n' |grep -i charset |cut -d= -f2)"
-        if [  "$charset" != "utf-8" ]
-        then
-            new_name="$dirname"/$(mktemp -u legenda_XXXXXX).srt
-            iconv -f "$charset" -t utf-8 "$sub" -o "$new_name"
-            sub="$new_name"
-            echo "$LEGENDA"
-            # to strip any formatting settings
-            [[ -n $(cat "$sub" |grep -i font ) ]] && sed -i -e 's/<[^>]*>//g' -e 's/^ //' "$sub"
-        fi
-    }
+    extension="${filename##*.}"
     output="$(zenity --title="Output file" --text "Name?" --entry 2> /dev/null)"
+}
 
+_getTime() {
     echo -n "$INICIO? 0123 " ; read inicio
     echo -n "$FIM?  0259 " ; read fim
     echo -e "$inicio $fim\n$output\n" >> "$dirname"/INFO
 
-    if [[ -n $file  && -n $output  && -n $inicio && -n $fim ]]
-    then  
-        if [[ $(echo -n $inicio | wc -c) -eq  6 ]]
-        then
-            if [[ -n $1 ]]
-            then
-                cmd="ffmpeg -i \"$file\" -i \"$sub\" -ss "${inicio:0:2}":"${inicio:2:2}":"${inicio:4:2}" -to "${fim:0:2}":"${fim:2:2}":"${fim:4:2}" -scodec $scodec -acodec copy -vcodec h264 -qp 12 \"$dirname\"/"${output// /_}"."$extension""
-                eval $cmd
-                echo $cmd | xclip -i -selection clipboard
-                ffmpeg -i "$sub" -ss "${inicio:0:2}":"${inicio:2:2}":"${inicio:4:2}" -to "${fim:0:2}":"${fim:2:2}":"${fim:4:2}" "$dirname"/"${output// /_}".srt
-                # rm "$sub"
-                # ffmpeg -i "$dirname"/"${output// /_}"."$extension" -map 0:s:0 "$dirname"/"${output// /_}".srt
-            else
-                cmd="ffmpeg -i \"$file\" -ss "${inicio:0:2}":"${inicio:2:2}":"${inicio:4:2}" -to "${fim:0:2}":"${fim:2:2}":"${fim:4:2}" -acodec copy -vcodec h264 -qp 12  \"$dirname\"/"${output// /_}"."$extension""
-                eval $cmd
-                echo $cmd | xclip -i -selection clipboard
-            fi
-
-        elif [[ $(echo -n $inicio | wc -c) -eq  4 ]]
-        then
-            if [[ -n $1 ]]
-            then
-                cmd="ffmpeg -i \"$file\" -i \"$sub\" -ss "${inicio:0:2}":"${inicio:2:2}" -to "${fim:0:2}":"${fim:2:2}" -scodec $scodec -acodec copy -vcodec h264 -qp 12 \"$dirname\"/"${output// /_}"."$extension""
-                eval $cmd
-                echo $cmd | xclip -i -selection clipboard
-                ffmpeg -i "$sub" -ss "${inicio:0:2}":"${inicio:2:2}" -to "${fim:0:2}":"${fim:2:2}" "$dirname"/"${output// /_}".srt
-                # rm "$sub"
-                # ffmpeg -i "$dirname"/"${output// /_}"."$extension" -map 0:s:0 "$dirname"/"${output// /_}".srt
-            else    
-                cmd="ffmpeg -i \"$file\" -ss "${inicio:0:2}":"${inicio:2:2}" -to "${fim:0:2}":"${fim:2:2}" -acodec copy -vcodec h264 -qp 12 \"$dirname\"/"${output// /_}"."$extension""
-                eval $cmd
-                echo $cmd | xclip -i -selection clipboard
-            fi
-        else
-            echo "$UM"
-        fi
-    else
-        echo "$DOIS"
-    fi
-    notify-send -u critical -t 600 -i task-due "ED_VIDEO" "$TERM"
-
+     [[ ! $(echo -n $inicio | wc -c) -eq 4 ]] && 
+        [[ ! $(echo -n $inicio | wc -c) -eq 4 ]] && echo "$UM" && exit 1
+    
+    [[ $(echo -n $inicio | wc -c) -eq  4 ]] && inicioData="${inicio:0:2}":"${inicio:2:2}" && fimData="${fim:0:2}":"${fim:2:2}"
+    [[ $(echo -n $inicio | wc -c) -eq  6 ]] && inicioData="${inicioData}" &&
+        fimData="${DfimData:2}"
 }
 
-cut_subtitles() {
+_validateData() {
+    [[ -z $output || -z $inicio || -z $fim ]] && echo "$DOIS" && exit 1
+}
+
+_runCommand() {
+    eval $cmd
+    echo $cmd | xclip -i -selection clipboard
+    notify-send -u critical -t 600 -i task-due "ED_VIDEO" "$TERM"
+}
+
+
+cutVideo() {
+    _getData
+    _getTime
+    _validateData
+    [[ $extension == "mkv" ]] && scodec="srt" || scodec="mov_text"
+
+    [[ -z $1 ]] && cmd="ffmpeg -i \"$file\" -ss "${inicioData}" -to "${fimData}" -acodec copy -vcodec h264 -qp 12  \"$dirname\"/"${output// /_}".mp4"
+    [[ -n $1 ]] && {
+        sub="$(zenity --title="Subtitle" --file-selection --filename="$file" 2> /dev/null)"
+        # check if subtitle file is coded in utf-8 charset. Otherwise we will get an error while encoding the video
+        charset="$(file -i "$sub" |tr ' ' '\n' |grep -i charset |cut -d= -f2)"
+        if [  "$charset" != "utf-8" ]; then
+            new_name="$dirname"/$(mktemp -u legenda_XXXXXX).srt
+            iconv -f "$charset" -t utf-8 "$sub" -o "$new_name"
+            sub="$new_name"
+            echo "$LEGENDA"
+            [[ -n $(cat "$sub" |grep -i font ) ]] && sed -i -e 's/<[^>]*>//g' -e 's/^ //' "$sub"
+        fi
+        cmd="ffmpeg -i \"$file\" -i \"$sub\" -ss "${inicioData}" -to "${fimData}" -scodec $scodec -acodec copy -vcodec h264 -qp 12 \"$dirname\"/"${output// /_}".mp4"
+        ffmpeg -i "$sub" -ss "${inicioData}" -to "${fimData}" "$dirname"/"${output// /_}".srt
+    }
+
+    _runCommand
+}
+
+cutSubtitles() {
     sub="$(zenity --title="Input file" --file-selection 2> /dev/null)"
-    dirname="$(dirname "$sub")"
     output="$(zenity --title="Output file" --text "Name?" --entry 2> /dev/null).srt"
     charset="$(file -i "$sub" |tr ' ' '\n' |grep -i charset |cut -d= -f2)"
-    if [  "$charset" != "utf-8" ]
-    then
+    if [  "$charset" != "utf-8" ]; then
         new_name="$dirname"/$(mktemp -u legenda_XXXXXX).srt
         iconv -f "$charset" -t utf-8 "$sub" -o "$new_name"
         sub="$new_name"
@@ -122,45 +108,23 @@ cut_subtitles() {
         [[ -n $(cat "$sub" |grep -i font ) ]] && sed -i -e 's/<[^>]*>//g' -e 's/^ //' "$sub"
     fi
 
-    echo -n "$INICIO? 0123 " ; read inicio
-    echo -n "$FIM?  0259 " ; read fim
-    echo -e "$inicio $fim\n$output\n" >> "$dirname"/INFO
-
-    if [[ -n $sub  && -n $output  && -n $inicio && -n $fim ]]
-    then  
-        if [[ $(echo -n $inicio | wc -c) -eq  6 ]]
-        then
-            cmd="ffmpeg -i \"$sub\" -ss "${inicio:0:2}":"${inicio:2:2}":"${inicio:4:2}" -to "${fim:0:2}":"${fim:2:2}":"${fim:4:2}" -scodec copy \"$dirname\"/"${output// /_}""
-            eval $cmd
-            echo $cmd | xclip -i -selection clipboard
-        elif [[ $(echo -n $inicio | wc -c) -eq  4 ]]
-        then
-            cmd="ffmpeg -i \"$sub\" -ss "${inicio:0:2}":"${inicio:2:2}" -to "${fim:0:2}":"${fim:2:2}" -scodec copy \"$dirname\"/"${output// /_}""
-            eval $cmd
-            echo $cmd | xclip -i -selection clipboard
-        else
-            echo "$UM"
-        fi
-    else
-        echo "$DOIS"
-    fi
+    _getTime
+    _validateData
+    
+    cmd="ffmpeg -i \"$sub\" -ss "${inicioData}" -to "${fimData}" -scodec copy \"$dirname\"/"${output// /_}""
+    _runCommand
     [[ -e "$new_name" ]] && rm "$new_name"
-    notify-send -u critical -t 600 -i task-due "ED_VIDEO" "$TERM"
 }
 
-subtitle_hardcoded() {
-    file="$(zenity --title="Input file" --file-selection 2> /dev/null)"
-    dirname="$(dirname "$file")"
-    filename="$(basename -- "$file")"
+subtitleHardcoded() {
+    _getData
     name="${filename%.*}"
+    
     [[ -e $dirname/$name.srt ]] && sub="$dirname/$name.srt" || sub="$(zenity --title="Subtitle" --file-selection --filename="$dirname" 2> /dev/null)"
-    output="$(zenity --title="Output file" --text "Name?" --entry 2> /dev/null)"
     [[ -n $(cat $sub |grep -i font ) ]] && sed -i -e 's/<[^>]*>//g' -e 's/^ //' "$sub"
     
     cmd="ffmpeg -i \"$file\" -vf \"subtitles='${sub}':force_style='${FONT_CONFIG}'\" -crf 14 -max_muxing_queue_size 1024 \"$dirname\"/"${output// /_}".mp4"
-    eval $cmd
-    echo $cmd | xclip -i -selection clipboard
-    notify-send -u critical -t 600 -i task-due "ED_VIDEO" "$TERM"
+    _runCommand
 }
 
 echo -e "$LAST"
@@ -170,16 +134,16 @@ do
     read -p "#) " resp
     case $resp in
         1) echo "$TRES"
-        cut_vid
+        cutVideo
         ;; 
         2) echo "$QUATRO"
-        cut_vid sub
+        cutVideo sub
         ;;
         3) echo "$CINCO"
-        subtitle_hardcoded
+        subtitleHardcoded
         ;;
         4) echo "$SETE"
-        cut_subtitles
+        cutSubtitles
         ;;
         5) echo "$OITO"
         exit 0
