@@ -38,7 +38,7 @@ ARGS="$@"
     TERM="Finished!"
 }
 
-_getData() {
+getData() {
     [[ -e $ARGS ]] && file="$ARGS" || file="$(zenity --title="File" --file-selection 2> /dev/null)"
     filename="$(basename -- "$file")"
     dirname="$(dirname "$file")"
@@ -46,7 +46,7 @@ _getData() {
     output="$(zenity --title="Output file" --text "Name?" --entry 2> /dev/null)"
 }
 
-_getTime() {
+getTime() {
     echo -n "$INICIO? 0123 " ; read inicio
     echo -n "$FIM?  0259 " ; read fim
     echo -e "$inicio $fim\n$output\n" >> "$dirname"/INFO
@@ -59,11 +59,11 @@ _getTime() {
         fimData="${DfimData:2}"
 }
 
-_validateData() {
+validateData() {
     [[ -z $output || -z $inicio || -z $fim ]] && echo "$DOIS" && exit 1
 }
 
-_runCommand() {
+runCommand() {
     eval $cmd
     echo $cmd | xclip -i -selection clipboard
     notify-send -u critical -t 600 -i task-due "ED_VIDEO" "$TERM"
@@ -71,9 +71,9 @@ _runCommand() {
 
 
 cutVideo() {
-    _getData
-    _getTime
-    _validateData
+    getData
+    getTime
+    validateData
     [[ $extension == "mkv" ]] && scodec="srt" || scodec="mov_text"
 
     [[ -z $1 ]] && cmd="ffmpeg -i \"$file\" -ss "${inicioData}" -to "${fimData}" -acodec copy -vcodec h264 -qp 12  \"$dirname\"/"${output// /_}".mp4"
@@ -92,7 +92,7 @@ cutVideo() {
         ffmpeg -i "$sub" -ss "${inicioData}" -to "${fimData}" "$dirname"/"${output// /_}".srt
     }
 
-    _runCommand
+    runCommand
 }
 
 cutSubtitles() {
@@ -108,23 +108,23 @@ cutSubtitles() {
         [[ -n $(cat "$sub" |grep -i font ) ]] && sed -i -e 's/<[^>]*>//g' -e 's/^ //' "$sub"
     fi
 
-    _getTime
-    _validateData
+    getTime
+    validateData
     
     cmd="ffmpeg -i \"$sub\" -ss "${inicioData}" -to "${fimData}" -scodec copy \"$dirname\"/"${output// /_}""
-    _runCommand
+    runCommand
     [[ -e "$new_name" ]] && rm "$new_name"
 }
 
 subtitleHardcoded() {
-    _getData
+    getData
     name="${filename%.*}"
     
     [[ -e $dirname/$name.srt ]] && sub="$dirname/$name.srt" || sub="$(zenity --title="Subtitle" --file-selection --filename="$dirname" 2> /dev/null)"
     [[ -n $(cat $sub |grep -i font ) ]] && sed -i -e 's/<[^>]*>//g' -e 's/^ //' "$sub"
     
     cmd="ffmpeg -i \"$file\" -vf \"subtitles='${sub}':force_style='${FONT_CONFIG}'\" -crf 14 -max_muxing_queue_size 1024 \"$dirname\"/"${output// /_}".mp4"
-    _runCommand
+    runCommand
 }
 
 echo -e "$LAST"
